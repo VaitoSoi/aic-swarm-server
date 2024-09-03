@@ -4,6 +4,7 @@ from os import path
 
 import requests
 from tqdm import tqdm
+import re
 
 import exception
 import utils
@@ -32,25 +33,21 @@ def check_missing_clip_feature():
 
 
 def download_ggdrive(id: str, file: str) -> None:
-    def get_confirm_token(response):
-        for key, value in response.cookies.items():
-            if key.startswith("download_warning"):
-                return value
-
-        return None
-
     session = requests.Session()
-    response = session.get(utils.gg_drive, params={"id": id})
-    confirm = get_confirm_token(session)
+    warning = session.get(f"https://drive.google.com/uc?id={id}")
+    if warning.status_code != 200:
+        raise exception.DownloadFailed(f"https://drive.google.com/uc?id={id}")
 
-    if confirm:
-        response = session.get(utils.gg_drive, params={"id": id, "confirm": confirm}, stream=True)
+    uuid = re.findall(r'<input type="hidden" name="uuid" value="(.+)"></form>', warning.text)[0]
 
+    url = f"https://drive.usercontent.google.com/download?export=download&confirm=t&id={id}&uuid={uuid}"
+    response = session.get(url, stream=True)
     if response.status_code != 200:
-        raise exception.DownloadFailed(id)
+        raise exception.DownloadFailed(url)
 
     length = int(response.headers.get("content-length", 0))
     chunk_size = 1024 * 1024
+
     with tqdm(total=length // chunk_size,
               unit="MB",
               ascii=True,
@@ -59,13 +56,9 @@ def download_ggdrive(id: str, file: str) -> None:
             for data in response.iter_content(chunk_size):
                 file.write(data)
                 bar.update(1)
-    return
 
 
 def download(url: str, file: str) -> None:
-    if url.startswith("drive:"):
-        return download_ggdrive(url[6:], file)
-
     response = requests.get(url, stream=True)
     if response.status_code != 200:
         raise exception.DownloadFailed(url)
@@ -80,13 +73,16 @@ def download(url: str, file: str) -> None:
             for data in response.iter_content(chunk_size):
                 file.write(data)
                 bar.update(1)
-
     return
 
 
 def download_keyframe(keyframe):
     try:
-        download(keyframes_mirror_json.get(keyframe, None), f"{keyframe}.zip")
+        url = keyframes_mirror_json.get(keyframe, None)
+        if url.startswith("drive:"):
+            download_ggdrive(url[6:], f"{keyframe}.zip")
+        else:
+            download(url, f"{keyframe}.zip")
     except exception.DownloadFailed as error:
         print(f"Download failed: {error.args[0]}")
         return
