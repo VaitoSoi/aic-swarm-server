@@ -27,6 +27,7 @@ data = path.abspath("data")
 mirror = path.abspath("mirror")
 objects = path.abspath("objects")
 base_url = "https://atm249495-s3user.vcos.cloudstorage.com.vn/aic24-b5/"
+gg_drive = "https://drive.google.com/uc?export=download&confirm=1"
 
 os.mkdir(temp) if not os.path.exists(temp) else None
 os.mkdir(data) if not os.path.exists(data) else None

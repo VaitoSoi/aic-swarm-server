@@ -6,6 +6,7 @@ import requests
 from tqdm import tqdm
 
 import exception
+import utils
 from utils import (read_json,
                    keyframes,
                    keyframes_mirror,
@@ -30,7 +31,41 @@ def check_missing_clip_feature():
     return False
 
 
+def download_ggdrive(id: str, file: str) -> None:
+    def get_confirm_token(response):
+        for key, value in response.cookies.items():
+            if key.startswith("download_warning"):
+                return value
+
+        return None
+
+    session = requests.Session()
+    response = session.get(utils.gg_drive, params={"id": id})
+    confirm = get_confirm_token(session)
+
+    if confirm:
+        response = session.get(utils.gg_drive, params={"id": id, "confirm": confirm}, stream=True)
+
+    if response.status_code != 200:
+        raise exception.DownloadFailed(id)
+
+    length = int(response.headers.get("content-length", 0))
+    chunk_size = 1024 * 1024
+    with tqdm(total=length // chunk_size,
+              unit="MB",
+              ascii=True,
+              desc=file) as bar:
+        with open(path.join(temp, file), "wb") as file:
+            for data in response.iter_content(chunk_size):
+                file.write(data)
+                bar.update(1)
+    return
+
+
 def download(url: str, file: str) -> None:
+    if url.startswith("drive:"):
+        return download_ggdrive(url[6:], file)
+
     response = requests.get(url, stream=True)
     if response.status_code != 200:
         raise exception.DownloadFailed(url)
@@ -41,7 +76,7 @@ def download(url: str, file: str) -> None:
               unit="MB",
               ascii=True,
               desc=file) as bar:
-        with open(f"{temp}/{file}", "wb") as file:
+        with open(path.join(temp, file), "wb") as file:
             for data in response.iter_content(chunk_size):
                 file.write(data)
                 bar.update(1)
