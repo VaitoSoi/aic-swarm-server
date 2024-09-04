@@ -32,7 +32,7 @@ class Manager:
 
         self.pending = [item for item in self.all if not path.exists(path.join(utils.objects, item))]
         self.pending = sorted(self.pending)
-        self.bar = tqdm(total=len(self.pending), unit="frames", ascii=True, desc="Processing...")
+        # self.bar = tqdm(total=len(self.pending), unit="frames", ascii=True, desc="Processing...")
 
     def process(self):
         item = self.pending.pop(0)
@@ -42,9 +42,9 @@ class Manager:
     def interrupt(self, item: str):
         self.pending.insert(0, item)
         self.processing.remove(item)
-        self.bar.n -= 1 if self.bar.last_print_n > 0 else 0
-        self.bar.last_print_n -= 1 if self.bar.last_print_n > 0 else 0
-        self.bar.refresh()
+        # self.bar.n -= 1 if self.bar.last_print_n > 0 else 0
+        # self.bar.last_print_n -= 1 if self.bar.last_print_n > 0 else 0
+        # self.bar.refresh()
         return
 
     def finish(self, item: str, result: dict[str, str] | list[dict[str, str]]):
@@ -55,5 +55,5 @@ class Manager:
             os.makedirs(dir)
         utils.write_json(file, result)
 
-        self.bar.update(1)
+        # self.bar.update(1)
 

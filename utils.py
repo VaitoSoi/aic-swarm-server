@@ -137,6 +137,6 @@ def formatter(name: str, formatter_: logging.Formatter = ColorizedFormatter):
 
 
 def handler(name: str, formatter_: logging.Formatter = ColorizedFormatter):
-    handler = TqdmLoggingHandler()
+    handler = logging.StreamHandler()
     handler.setFormatter(formatter(name, formatter_))
     return handler
